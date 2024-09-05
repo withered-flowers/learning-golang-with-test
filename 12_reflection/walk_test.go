@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestXxx(t *testing.T) {
+func TestWalk(t *testing.T) {
 	t.Run("First Case, simple value", func(t *testing.T) {
 		expected := "Someone"
 		var got []string
@@ -80,7 +80,14 @@ func TestXxx(t *testing.T) {
 				},
 				[]string{"London", "Reykjavík"},
 			},
-			// TODO: Handle Arrays
+			{
+				"arrays",
+				[2]Profile{
+					{33, "London"},
+					{34, "Reykjavík"},
+				},
+				[]string{"London", "Reykjavík"},
+			},
 		}
 
 		for _, test := range cases {
@@ -98,4 +105,69 @@ func TestXxx(t *testing.T) {
 		}
 	})
 
+	t.Run("with maps", func(t *testing.T) {
+		aMap := map[string]string{
+			"Cow":   "Moo",
+			"Sheep": "Baa",
+		}
+
+		var got []string
+		walk(aMap, func(input string) {
+			got = append(got, input)
+		})
+
+		assertContains(t, got, "Moo")
+		assertContains(t, got, "Baa")
+	})
+
+	t.Run("with channels", func(t *testing.T) {
+		aChannel := make(chan Profile)
+
+		go func() {
+			aChannel <- Profile{30, "Berlin"}
+			aChannel <- Profile{34, "Java"}
+			close(aChannel)
+		}()
+
+		var got []string
+		want := []string{"Berlin", "Java"}
+
+		walk(aChannel, func(input string) {
+			got = append(got, input)
+		})
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v want %v", got, want)
+		}
+	})
+
+	t.Run("with functions", func(t *testing.T) {
+		aFunction := func() (Profile, Profile) {
+			return Profile{20, "Hello"}, Profile{18, "Almost"}
+		}
+
+		var got []string
+		want := []string{"Hello", "Almost"}
+
+		walk(aFunction, func(input string) {
+			got = append(got, input)
+		})
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v want %v", got, want)
+		}
+	})
+}
+
+func assertContains(t testing.TB, haystack []string, needle string) {
+	t.Helper()
+	contains := false
+	for _, x := range haystack {
+		if x == needle {
+			contains = true
+		}
+	}
+	if !contains {
+		t.Errorf("expected %v to contain %q but it didn't", haystack, needle)
+	}
 }
